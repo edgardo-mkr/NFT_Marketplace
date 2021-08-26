@@ -44,7 +44,7 @@ contract MarketplaceV1 is Initializable, Ownable{
 
     function placeOffer(address _tokenAdress, uint _tokenId, uint _amount, uint32 _deadline, uint32 _usdPrice) public payable{
         IERC1155 tokenContract = IERC1155(_tokenAdress);
-        require(tokenContract.isApprovedForAll(msg.sender, this.address), "Approval is required to spend the tokens to be offered");
+        require(tokenContract.isApprovedForAll(msg.sender, address(this)), "Approval is required to spend the tokens to be offered");
         uint id = offers.push(Offer(_tokenAdress, _tokenId, _amount, block.timestamp + _deadline, _usdPrice, true)) - 1;
         offerToOwner[id] = msg.sender;
     }
@@ -53,6 +53,34 @@ contract MarketplaceV1 is Initializable, Ownable{
         require(_id < offers.length, "Offer id does not exist");
         require(offerToOwner[_id] == msg.sender, "You are not the creator of this offer");
         offers[_id].onSale = false;
+    }
+
+    function buy(uint _id, string memory _payMethod) public payable{
+        require(_id < offers.length, "Offer id does not exist");
+
+        address seller = offerToOwner[_id];
+        Offer memory sellerOffer = offers[_id];
+
+        require(seller != msg.sender, "The seller can't be the buyer aswell");
+        require(sellerOffer.onSale, "This offer has been cancelled");
+        require(block.timestamp <= sellerOffer.deadline, "The deadline has been reached");
+
+        IERC1155 tokenContract = IERC1155(sellerOffer.tokenAdress);
+        require(tokenContract.isApprovedForAll(offerToOwner[_id], address(this)), "The seller has remove aproval to spend the tokens");
+
+        if (_payMethod == "ETH"){
+            require(msg.value > 0, "You have not sent any ehter");
+            uint price = uint(getEthPrice() / int(sellerOffer.usdPrice));
+            require(price <= msg.value, "Not enough ether sent");
+            tokenContract.safeTransferFrom(seller,msg.sender,sellerOffer.tokenId,sellerOffer.amount, "");
+            payable(seller).call{value: price - ((price * fee) / 100)}("");
+            sellerOffer.onSale = false;
+            payable(recipient).call{value: (price * fee) / 100}("");
+            
+            if(msg.value > price){
+                payable(msg.sender).call{value: msg.value - price}("");
+            }
+        }
     }
 
 
