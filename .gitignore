@@ -1,4 +1,11 @@
 ### Solidity ###
+node_modules/
+build/
+artifacts/
+cache/
+package-lock.json
+.env
+yarn.lock
 # Logs
 logs
 *.log
