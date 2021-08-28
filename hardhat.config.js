@@ -10,8 +10,8 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
-        blockNumber: 13025254
+        url: `https://eth-mainnet.alchemyapi.io/v2/cEyc4P4mOyGkaYeP--7H_fnZeArtZh3c`,
+        blockNumber: 13110417
       }
     }
   },

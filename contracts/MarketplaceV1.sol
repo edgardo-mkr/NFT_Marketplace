@@ -77,7 +77,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         require(tokenContract.isApprovedForAll(offerInfo.owner, address(this)), "The seller has remove aproval to spend the tokens");
 
         require(msg.value > 0, "You have not sent any ether");
-        uint price = uint(int(offerInfo.usdPrice) / getEthPrice());
+        uint price = uint(int(offerInfo.usdPrice) * (10**18) / getEthPrice());
         require(price <= msg.value, "Not enough ether sent");
         tokenContract.safeTransferFrom(offerInfo.owner,msg.sender,offerInfo.tokenId,offerInfo.amount, "");
         payable(offerInfo.owner).call{value: price - (price * fee / 100)}("");
@@ -103,7 +103,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         require(tokenContract.isApprovedForAll(offerInfo.owner, address(this)), "The seller has remove aproval to spend the tokens");
 
         require(daiToken.allowance(msg.sender, address(this)) >= _amount, "Allowance is needed to spend the dai token");
-        uint price = uint(int(offerInfo.usdPrice) / getDaiPrice());
+        uint price = uint(int(offerInfo.usdPrice) * (10**18) / getDaiPrice());
         require(price <= _amount, "Not enough Dai to buy the token");
 
         tokenContract.safeTransferFrom(offerInfo.owner, msg.sender, offerInfo.tokenId, offerInfo.amount, "");
@@ -125,7 +125,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         require(tokenContract.isApprovedForAll(offerInfo.owner, address(this)), "The seller has remove aproval to spend the tokens");
 
         require(linkToken.allowance(msg.sender, address(this)) >= _amount, "Allowance is needed to spend the link token");
-        uint price = uint(int(offerInfo.usdPrice) / getLinkPrice());
+        uint price = uint(int(offerInfo.usdPrice) * (10**18) / getLinkPrice());
         require(price <= _amount, "Not enough Link to buy the token");
 
         tokenContract.safeTransferFrom(offerInfo.owner, msg.sender, offerInfo.tokenId, offerInfo.amount, "");
