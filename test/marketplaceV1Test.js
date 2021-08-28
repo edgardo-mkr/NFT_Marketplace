@@ -110,13 +110,16 @@ describe("MarketplaceV1 contract", function (){
     
     let Market;
     let hardhatMarket;
-    let seller
+    let seller;
+    let buyerWithToken;
     let owner;
     let recipient;
     let addr1;
     let addrs;
 
     beforeEach(async function (){
+
+        //impersonating erc1155 holder
         await hre.network.provider.request({
             method: "hardhat_impersonateAccount",
             params: ["0x5a098be98f6715782ee73dc9c5b9574bd4c130c9"],
@@ -127,25 +130,69 @@ describe("MarketplaceV1 contract", function (){
           ]);
         seller = await ethers.getSigner("0x5a098be98f6715782ee73dc9c5b9574bd4c130c9");
 
+        //impersonating dai & link holder
+        await hre.network.provider.request({
+            method: "hardhat_impersonateAccount",
+            params: ["0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503"],
+        });
+        await network.provider.send("hardhat_setBalance", [
+            "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503",
+            "0x3635c9adc5dea00000",
+          ]);
+        buyerWithToken = await ethers.getSigner("0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503");
+        
+        //deploying proxy
         Market = await ethers.getContractFactory("MarketplaceV1");
         [owner, recipient, addr1, ...addrs] = await ethers.getSigners();
         hardhatMarket = await upgrades.deployProxy(Market, [recipient.address]);
     });
     
-    describe("Sell offer", function() {
-        it("Should transfer tokens after a successful buy", async function() {
+    describe("Buying with ETH", function() {
+        it("Should transfer tokens after a successful Eth buy", async function() {
             let balance = await raribleContract.balanceOf(seller.address, 65678);
             console.log(`${balance}`);
             await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
             balance = await provider.getBalance(seller.address);
             console.log(ethers.utils.formatUnits(balance, 18));
-            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 10, 120, 1000);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 10, 1000, 120);
             balance = await provider.getBalance(seller.address);
             console.log(ethers.utils.formatUnits(balance, 18));
             await hardhatMarket.buyWithEther(1,{value: ethers.utils.parseEther("1.0")});
             expect(await raribleContract.balanceOf(owner.address, 65678)).to.equal(10);
         })
     });
+
+    describe("Buying with DAI", function() {
+        it("should transfer tokens after a successful dai buy", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 10, 1000, 120);
+
+            let balanceInit = await daiContract.balanceOf(buyerWithToken.address);
+            console.log(`dai balance before purchase :${balanceInit} Dai`);
+            await daiContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('1200.0', 18));
+            await hardhatMarket.connect(buyerWithToken).buyWithDai(1);
+            let balanceEnd = await daiContract.balanceOf(buyerWithToken.address);
+            console.log(`dai balance after purchase :${balanceEnd} Dai`);
+            console.log(`dai spent: ${balanceInit - balanceEnd}`)
+            let daiprice = await hardhatMarket.getDaiPrice();
+            console.log(`chainlink oracle, dai price: ${daiprice}`);
+        })
+    })
+        
+    describe("Buying with Link", function() {
+        it("should transfer tokens after a successful link buy", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 10, 1000, 120);
+
+            balance = await linkContract.balanceOf(buyerWithToken.address);
+            console.log(`link balance before purchase :${balance} Link`);
+            await linkContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('50.0', 18));
+            await hardhatMarket.connect(buyerWithToken).buyWithLink(1);
+            balance = await linkContract.balanceOf(buyerWithToken.address);
+            console.log(`link balance after purchase :${balance} Link`);
+        })
+    })
+    
 
 })
 

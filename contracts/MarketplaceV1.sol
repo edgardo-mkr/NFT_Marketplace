@@ -17,8 +17,8 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         address tokenAdress;
         uint tokenId;
         uint amount;
+        uint usdPrice;
         uint32 deadline;
-        uint32 usdPrice;
         bool onSale;
     }
 
@@ -51,11 +51,11 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         recipient = _newRecipient;
     }
 
-    function placeOffer(address _tokenAdress, uint _tokenId, uint _amount, uint32 _deadline, uint32 _usdPrice) public payable{
+    function placeOffer(address _tokenAdress, uint _tokenId, uint _amount, uint _usdPrice, uint32 _deadline) public payable{
         IERC1155 tokenContract = IERC1155(_tokenAdress);
         require(tokenContract.isApprovedForAll(msg.sender, address(this)), "Approval is required to spend the tokens to be offered");
         offerCount++;
-        offers[offerCount] = Offer(msg.sender,_tokenAdress, _tokenId, _amount, uint32(block.timestamp + _deadline), _usdPrice, true);
+        offers[offerCount] = Offer(msg.sender,_tokenAdress, _tokenId, _amount, _usdPrice * (10**8),uint32(block.timestamp + _deadline), true);
     }
 
     function cancellOffer(uint _id) public {
@@ -90,7 +90,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         
     }
 
-    function buyWithDai(uint _id, uint _amount) external payable nonReentrant{
+    function buyWithDai(uint _id) external payable nonReentrant{
         require(_id <= offerCount, "Offer id does not exist");
 
         Offer storage offerInfo = offers[_id];
@@ -101,10 +101,10 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
 
         IERC1155 tokenContract = IERC1155(offerInfo.tokenAdress);
         require(tokenContract.isApprovedForAll(offerInfo.owner, address(this)), "The seller has remove aproval to spend the tokens");
-
-        require(daiToken.allowance(msg.sender, address(this)) >= _amount, "Allowance is needed to spend the dai token");
+        
         uint price = uint(int(offerInfo.usdPrice) * (10**18) / getDaiPrice());
-        require(price <= _amount, "Not enough Dai to buy the token");
+        require(daiToken.allowance(msg.sender, address(this)) >= price, "Not enough allowance to buy the tokens");
+        
 
         tokenContract.safeTransferFrom(offerInfo.owner, msg.sender, offerInfo.tokenId, offerInfo.amount, "");
         daiToken.transferFrom(msg.sender, offerInfo.owner, price - (price * fee / 100));
@@ -112,7 +112,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         daiToken.transferFrom(msg.sender, recipient, price * fee / 100);
     }
     
-    function buyWithLink(uint _id, uint _amount) external payable nonReentrant{
+    function buyWithLink(uint _id) external payable nonReentrant{
         require(_id <= offerCount, "Offer id does not exist");
 
         Offer storage offerInfo = offers[_id];
@@ -124,9 +124,9 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         IERC1155 tokenContract = IERC1155(offerInfo.tokenAdress);
         require(tokenContract.isApprovedForAll(offerInfo.owner, address(this)), "The seller has remove aproval to spend the tokens");
 
-        require(linkToken.allowance(msg.sender, address(this)) >= _amount, "Allowance is needed to spend the link token");
         uint price = uint(int(offerInfo.usdPrice) * (10**18) / getLinkPrice());
-        require(price <= _amount, "Not enough Link to buy the token");
+        require(linkToken.allowance(msg.sender, address(this)) >= price, "Not enough allowance to buy the tokens");
+        
 
         tokenContract.safeTransferFrom(offerInfo.owner, msg.sender, offerInfo.tokenId, offerInfo.amount, "");
         linkToken.transferFrom(msg.sender, offerInfo.owner, price - (price * fee / 100));
