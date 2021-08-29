@@ -1,5 +1,7 @@
 const { ethers, upgrades } = require('hardhat');
 const { expect } = require("chai");
+const balance = require('@openzeppelin/test-helpers/src/balance');
+require('@openzeppelin/test-helpers/src/setup');
 const { isCallTrace } = require('hardhat/internal/hardhat-network/stack-traces/message-trace');
 
 
@@ -149,16 +151,26 @@ describe("MarketplaceV1 contract", function (){
     
     describe("Buying with ETH", function() {
         it("Should transfer tokens after a successful Eth buy", async function() {
-            let balance = await raribleContract.balanceOf(seller.address, 65678);
-            console.log(`${balance}`);
+            
             await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
-            balance = await provider.getBalance(seller.address);
-            console.log(ethers.utils.formatUnits(balance, 18));
+            
             await hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 10, 1000, 120);
-            balance = await provider.getBalance(seller.address);
-            console.log(ethers.utils.formatUnits(balance, 18));
+            
+            let sellerBalance = await provider.getBalance(seller.address);
+
+            let priceInEth = await hardhatMarket.getEthPrice(); 
+            let num = BigInt(1000) * BigInt(10**8) * BigInt(10**18);
+            priceInEth = num / BigInt(priceInEth); 
+
+            const recipientTracker = await balance.tracker(recipient.address);
+            let buyerTracker = await balance.tracker(owner.address);
             await hardhatMarket.buyWithEther(1,{value: ethers.utils.parseEther("1.0")});
+            const { delta, fees } = await buyerTracker.deltaWithFees();
+            
             expect(await raribleContract.balanceOf(owner.address, 65678)).to.equal(10);
+            expect(await provider.getBalance(seller.address)).to.equal(BigInt(sellerBalance) + (priceInEth - (priceInEth/BigInt(100))));
+            expect(await recipientTracker.delta()).to.be.bignumber.equal((priceInEth/BigInt(100)).toString());
+            expect(delta).to.be.bignumber.equal( "-" + (BigInt(priceInEth) + BigInt(fees)).toString())
         })
     });
 
@@ -176,6 +188,7 @@ describe("MarketplaceV1 contract", function (){
             console.log(`dai spent: ${balanceInit - balanceEnd}`)
             let daiprice = await hardhatMarket.getDaiPrice();
             console.log(`chainlink oracle, dai price: ${daiprice}`);
+            expect(await raribleContract.balanceOf(buyerWithToken.address, 65678)).to.equal(10);
         })
     })
         
@@ -184,12 +197,12 @@ describe("MarketplaceV1 contract", function (){
             await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
             await hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 10, 1000, 120);
 
-            balance = await linkContract.balanceOf(buyerWithToken.address);
-            console.log(`link balance before purchase :${balance} Link`);
+            let daiamount = await daiContract.balanceOf(buyerWithToken.address);
+            console.log(`balance en dai: ${daiamount}`);            
             await linkContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('50.0', 18));
             await hardhatMarket.connect(buyerWithToken).buyWithLink(1);
-            balance = await linkContract.balanceOf(buyerWithToken.address);
-            console.log(`link balance after purchase :${balance} Link`);
+            
+            expect(await raribleContract.balanceOf(buyerWithToken.address, 65678)).to.equal(20);
         })
     })
     

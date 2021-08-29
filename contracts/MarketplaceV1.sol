@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
@@ -77,7 +78,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         require(tokenContract.isApprovedForAll(offerInfo.owner, address(this)), "The seller has remove aproval to spend the tokens");
 
         require(msg.value > 0, "You have not sent any ether");
-        uint price = uint(int(offerInfo.usdPrice) * (10**18) / getEthPrice());
+        uint price = offerInfo.usdPrice * (10**18) / uint(getEthPrice());
         require(price <= msg.value, "Not enough ether sent");
         tokenContract.safeTransferFrom(offerInfo.owner,msg.sender,offerInfo.tokenId,offerInfo.amount, "");
         payable(offerInfo.owner).call{value: price - (price * fee / 100)}("");

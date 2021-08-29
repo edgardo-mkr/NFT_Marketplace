@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require('@openzeppelin/hardhat-upgrades');
+require("@nomiclabs/hardhat-web3");
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
