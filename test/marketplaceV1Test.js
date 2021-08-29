@@ -179,16 +179,20 @@ describe("MarketplaceV1 contract", function (){
             await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
             await hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 10, 1000, 120);
 
-            let balanceInit = await daiContract.balanceOf(buyerWithToken.address);
-            console.log(`dai balance before purchase :${balanceInit} Dai`);
+            
             await daiContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('1200.0', 18));
+
+            let sellerDai = await daiContract.balanceOf(seller.address)
+            let recipientDai = await daiContract.balanceOf(recipient.address);
             await hardhatMarket.connect(buyerWithToken).buyWithDai(1);
-            let balanceEnd = await daiContract.balanceOf(buyerWithToken.address);
-            console.log(`dai balance after purchase :${balanceEnd} Dai`);
-            console.log(`dai spent: ${balanceInit - balanceEnd}`)
-            let daiprice = await hardhatMarket.getDaiPrice();
-            console.log(`chainlink oracle, dai price: ${daiprice}`);
+            
+            let priceInDai = await hardhatMarket.getDaiPrice();
+            let num = BigInt(1000) * BigInt(10**8) * BigInt(10**18);
+            priceInDai = num / BigInt(priceInDai)
+            
             expect(await raribleContract.balanceOf(buyerWithToken.address, 65678)).to.equal(10);
+            expect(await daiContract.balanceOf(seller.address)).to.equal(BigInt(sellerDai) + (priceInDai - (priceInDai/BigInt(100))))
+            expect(await daiContract.balanceOf(recipient.address)).to.equal(BigInt(recipientDai) + (priceInDai/BigInt(100)))
         })
     })
         
@@ -197,12 +201,20 @@ describe("MarketplaceV1 contract", function (){
             await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
             await hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 10, 1000, 120);
 
-            let daiamount = await daiContract.balanceOf(buyerWithToken.address);
-            console.log(`balance en dai: ${daiamount}`);            
+                       
             await linkContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('50.0', 18));
+
+            let sellerLink = await linkContract.balanceOf(seller.address)
+            let recipientLink = await linkContract.balanceOf(recipient.address)
             await hardhatMarket.connect(buyerWithToken).buyWithLink(1);
             
+            let priceInLink = await hardhatMarket.getLinkPrice();
+            let num = BigInt(1000) * BigInt(10**8) * BigInt(10**18);
+            priceInLink = num / BigInt(priceInLink)
+
             expect(await raribleContract.balanceOf(buyerWithToken.address, 65678)).to.equal(20);
+            expect(await linkContract.balanceOf(seller.address)).to.equal(BigInt(sellerLink) + (priceInLink - (priceInLink/BigInt(100))))
+            expect(await linkContract.balanceOf(recipient.address)).to.equal(BigInt(recipientLink) + (priceInLink/BigInt(100)))
         })
     })
     
