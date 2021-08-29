@@ -217,6 +217,52 @@ describe("MarketplaceV1 contract", function (){
             expect(await linkContract.balanceOf(recipient.address)).to.equal(BigInt(recipientLink) + (priceInLink/BigInt(100)))
         })
     })
+
+    describe("Attempting to buy without sending or aproving enough tokens", function() {
+        it("Not sending enough ETH", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await expect(hardhatMarket.buyWithEther(1,{value: ethers.utils.parseEther("1.0")})).to.be.revertedWith('Not enough ether sent')
+        })
+        it("Not approving enough DAI token", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await daiContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('1000.0', 18))
+            await expect(hardhatMarket.connect(buyerWithToken).buyWithDai(1)).to.be.revertedWith('Not enough allowance to buy the tokens')
+        })
+        it("Not approving enough LINK token", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await linkContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('100.0', 18))
+            await expect(hardhatMarket.connect(buyerWithToken).buyWithLink(1)).to.be.revertedWith('Not enough allowance to buy the tokens')
+        })
+    })
+    
+    describe("Attempting to buy with an invalid ID offer", function() {
+        it("Attemp with ETH", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await expect(hardhatMarket.buyWithEther(2,{value: ethers.utils.parseEther("7.0")})).to.be.revertedWith('Offer id does not exist')
+        })
+        it("Attemp with DAI", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await daiContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('21000.0', 18))
+            await expect(hardhatMarket.connect(buyerWithToken).buyWithDai(2)).to.be.revertedWith('Offer id does not exist')
+        })
+        it("Attemp with LINK", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await linkContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('1000.0', 18))
+            await expect(hardhatMarket.connect(buyerWithToken).buyWithLink(2)).to.be.revertedWith('Offer id does not exist')
+        })
+    })
     
 
 })
