@@ -148,6 +148,22 @@ describe("MarketplaceV1 contract", function (){
         [owner, recipient, addr1, ...addrs] = await ethers.getSigners();
         hardhatMarket = await upgrades.deployProxy(Market, [recipient.address]);
     });
+
+    describe("Setting owner and recipient", function() {
+        it("Should set the right owner", async function() {
+            expect(await hardhatMarket.owner()).to.equal(owner.address);
+        })
+
+        it("Should set the right recipient", async function() {
+            expect(await hardhatMarket.recipient()).to.equal(recipient.address)
+        })
+    })
+
+    describe("Only owner", function() {
+        it("Should revert if update fee is called from account different than owner", async function() {
+            await expect(hardhatMarket.connect(addr1).updateFee(2)).to.be.revertedWith("Ownable: caller is not the owner");
+        })
+    })
     
     describe("Buying with ETH", function() {
         it("Should transfer tokens after a successful Eth buy", async function() {
