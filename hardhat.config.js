@@ -1,6 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require('@openzeppelin/hardhat-upgrades');
 require("@nomiclabs/hardhat-web3");
+require('dotenv').config()
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -11,7 +12,7 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: `https://eth-mainnet.alchemyapi.io/v2/cEyc4P4mOyGkaYeP--7H_fnZeArtZh3c`,
+        url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
         blockNumber: 13110417
       }
     }
