@@ -301,6 +301,36 @@ describe("MarketplaceV1 contract", function (){
         })
     })
 
+    describe("Seller removes approval after placing an offer", function() {
+        it("Should revert when client buy with ether", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,false);
+
+            await expect(hardhatMarket.buyWithEther(1, {value: ethers.utils.parseEther("7.0")}))
+            .to.be.revertedWith("The seller has remove aproval to spend the tokens");
+        })
+        it("Should revert when client buy with dai", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,false);
+
+
+            await expect(hardhatMarket.connect(buyerWithToken).buyWithDai(1))
+            .to.be.revertedWith("The seller has remove aproval to spend the tokens");
+        })
+        it("Should revert when client buy with link", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,false);
+
+            await expect(hardhatMarket.connect(buyerWithToken).buyWithLink(1))
+            .to.be.revertedWith("The seller has remove aproval to spend the tokens");
+        })
+
+        
+    })
+
     describe("Attempting to buy without sending or aproving enough tokens", function() {
         it("Not sending enough ETH", async function() {
             await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);

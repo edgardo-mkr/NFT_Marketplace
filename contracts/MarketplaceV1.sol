@@ -66,8 +66,6 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         daiPriceFeed = AggregatorV3Interface(0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9);
         linkPriceFeed = AggregatorV3Interface(0x2c1d072e956AFFC0D435Cb7AC38EF18d24d9127c);
 
-        
-
     }
 
     function updateFee(uint _newFee) public onlyOwner{
