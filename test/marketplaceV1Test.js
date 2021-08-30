@@ -1,9 +1,12 @@
 const { ethers, upgrades } = require('hardhat');
 const { expect } = require("chai");
+const { BN } = require("@openzeppelin/test-helpers/src/setup")
 const balance = require('@openzeppelin/test-helpers/src/balance');
+const time = require("@openzeppelin/test-helpers/src/time");
 require('@openzeppelin/test-helpers/src/setup');
 const { isCallTrace } = require('hardhat/internal/hardhat-network/stack-traces/message-trace');
 
+const TOLERANCE_SECONDS = new BN(1);
 
 const provider = ethers.provider;
 
@@ -178,6 +181,33 @@ describe("MarketplaceV1 contract", function (){
             await expect(hardhatMarket.connect(addr1).updateRecipient(addr1.address)).to.be.revertedWith("Ownable: caller is not the owner")
         })
     })
+
+    describe("Placing an offer", function() {
+        it("Should revert for not approving contract to spend tokens", async function() {
+            await expect(hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 10, 1000, 120))
+            .to.be.revertedWith("Approval is required to spend the tokens to be offered")
+        })
+        it("Should revert for insufficient balance of the tokens to be offered", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await expect(hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 40, 1000, 120))
+            .to.be.revertedWith("Seller balance insufficient to place the offer");
+        })
+        it("Should succesfully place an offer", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 65678, 10, 1000, 120);
+
+            const now = await time.latest();
+            let placedOffer = await hardhatMarket.offers(1);
+
+            expect(placedOffer.owner).to.equal(seller.address)
+            expect(placedOffer.tokenAdress).to.equal(raribleAddress)
+            expect(placedOffer.tokenId).to.equal(65678)
+            expect(placedOffer.amount).to.equal(10)
+            expect(placedOffer.usdPrice).to.equal(1000 * (10**8))
+            expect(placedOffer.deadline.toString()).to.be.bignumber.closeTo((BigInt(now) + BigInt(120)).toString(), TOLERANCE_SECONDS)
+            expect(placedOffer.onSale).to.equal(true)
+        })
+    })
     
     describe("Buying with ETH", function() {
         it("Should transfer tokens after a successful Eth buy", async function() {
@@ -317,7 +347,29 @@ describe("MarketplaceV1 contract", function (){
         })
     })
 
-    
+    describe("Seller attempting to buy its own tokens", function() {
+        it("Should revert while buying with ETH", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await expect(hardhatMarket.connect(seller).buyWithEther(1, {value: ethers.utils.parseEther("7.0")}))
+            .to.be.revertedWith("The seller can't be the buyer aswell")
+        })
+        it("Should revert while buying with DAI", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await expect(hardhatMarket.connect(seller).buyWithDai(1))
+            .to.be.revertedWith("The seller can't be the buyer aswell")
+        })
+        it("Should revert while buying with LINK", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await expect(hardhatMarket.connect(seller).buyWithLink(1))
+            .to.be.revertedWith("The seller can't be the buyer aswell")
+        })
+    })
     
 
 })

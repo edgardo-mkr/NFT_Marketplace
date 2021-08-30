@@ -36,7 +36,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
     function initialize(address _recipient) public initializer {
         OwnableUpgradeable.__Ownable_init();
         ReentrancyGuardUpgradeable.__ReentrancyGuard_init();
-        
+
         recipient = _recipient;
         fee = 1;
         daiToken = IERC20Upgradeable(0x6B175474E89094C44Da98b954EedeAC495271d0F);
@@ -61,6 +61,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
     function placeOffer(address _tokenAdress, uint _tokenId, uint _amount, uint _usdPrice, uint32 _deadline) public payable{
         IERC1155 tokenContract = IERC1155(_tokenAdress);
         require(tokenContract.isApprovedForAll(msg.sender, address(this)), "Approval is required to spend the tokens to be offered");
+        require(tokenContract.balanceOf(msg.sender, _tokenId) >= _amount, "Seller balance insufficient to place the offer");
         offerCount++;
         offers[offerCount] = Offer(msg.sender,_tokenAdress, _tokenId, _amount, _usdPrice * (10**8),uint32(block.timestamp + _deadline), true);
     }
