@@ -102,8 +102,9 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         Offer storage offerInfo = offers[_id];
 
         require(offerInfo.owner != msg.sender, "The seller can't be the buyer aswell");
-        require(offerInfo.onSale, "This offer has been cancelled");
         require(block.timestamp <= offerInfo.deadline, "The deadline has been reached");
+        require(offerInfo.onSale, "This offer has been cancelled");
+        
 
         IERC1155 tokenContract = IERC1155(offerInfo.tokenAdress);
         require(tokenContract.isApprovedForAll(offerInfo.owner, address(this)), "The seller has remove aproval to spend the tokens");
@@ -130,8 +131,9 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         Offer storage offerInfo = offers[_id];
 
         require(offerInfo.owner != msg.sender, "The seller can't be the buyer aswell");
-        require(offerInfo.onSale, "This offer has been cancelled");
         require(block.timestamp <= offerInfo.deadline, "The deadline has been reached");
+        require(offerInfo.onSale, "This offer has been cancelled");
+        
 
         IERC1155 tokenContract = IERC1155(offerInfo.tokenAdress);
         require(tokenContract.isApprovedForAll(offerInfo.owner, address(this)), "The seller has remove aproval to spend the tokens");
@@ -154,8 +156,9 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         Offer storage offerInfo = offers[_id];
 
         require(offerInfo.owner != msg.sender, "The seller can't be the buyer aswell");
-        require(offerInfo.onSale, "This offer has been cancelled");
         require(block.timestamp <= offerInfo.deadline, "The deadline has been reached");
+        require(offerInfo.onSale, "This offer has been cancelled");
+        
 
         IERC1155 tokenContract = IERC1155(offerInfo.tokenAdress);
         require(tokenContract.isApprovedForAll(offerInfo.owner, address(this)), "The seller has remove aproval to spend the tokens");
