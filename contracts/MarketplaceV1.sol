@@ -38,10 +38,10 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         address indexed _creator, 
         address indexed _tokenAdress, 
         uint indexed _tokenId,
-        uint indexed _amountOfTokens, 
-        uint indexed _priceinUsd, 
-        uint32 indexed _deadline,
-        bool indexed _onSale
+        uint _amountOfTokens, 
+        uint _priceinUsd, 
+        uint32 _deadline,
+        bool _onSale
     );
     event cancellingOffer(
         address indexed _creator,
