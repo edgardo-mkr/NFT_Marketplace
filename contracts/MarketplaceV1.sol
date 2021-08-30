@@ -113,12 +113,15 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         uint price = offerInfo.usdPrice * (10**18) / uint(getEthPrice());
         require(price <= msg.value, "Not enough ether sent");
         tokenContract.safeTransferFrom(offerInfo.owner,msg.sender,offerInfo.tokenId,offerInfo.amount, "");
-        payable(offerInfo.owner).call{value: price - (price * fee / 100)}("");
+        (bool sent1,) = payable(offerInfo.owner).call{value: price - (price * fee / 100)}("");
+        require(sent1, "Failed to send ether to seller");
         offerInfo.onSale = false;
-        payable(recipient).call{value: (price * fee) / 100}("");
-        
+        (bool sent2,) = payable(recipient).call{value: (price * fee) / 100}("");
+        require(sent2, "Failed to send ether to fee recipient");
+
         if(msg.value > price){
-            payable(msg.sender).call{value: msg.value - price}("");
+            (bool sent3,) = payable(msg.sender).call{value: msg.value - price}("");
+            require(sent3, "Failed to refund leftover ether from tx to buyer");
         }
 
         emit purchase(msg.sender, _id, "ETH");
