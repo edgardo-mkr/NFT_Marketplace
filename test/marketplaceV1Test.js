@@ -370,6 +370,33 @@ describe("MarketplaceV1 contract", function (){
             .to.be.revertedWith("The seller can't be the buyer aswell")
         })
     })
+
+    describe("Attemp to buy a cancelled offer", function() {
+        it("Should revert while buying with ETH", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await hardhatMarket.connect(seller).cancellOffer(1);
+
+            await expect(hardhatMarket.buyWithEther(1, {value: ethers.utils.parseEther("7.0")})).to.be.revertedWith("This offer has been cancelled")
+        })
+        it("Should revert while buying with DAI", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await hardhatMarket.connect(seller).cancellOffer(1);
+
+            await expect(hardhatMarket.connect(buyerWithToken).buyWithDai(1)).to.be.revertedWith("This offer has been cancelled")
+        })
+        it("Should revert while buying with LINK", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await hardhatMarket.connect(seller).cancellOffer(1);
+
+            await expect(hardhatMarket.connect(buyerWithToken).buyWithLink(1)).to.be.revertedWith("This offer has been cancelled")
+        })
+    })
     
 
 })

@@ -33,6 +33,26 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
     AggregatorV3Interface internal daiPriceFeed;
     AggregatorV3Interface internal linkPriceFeed;
 
+    //events
+    event placingOffer(
+        address indexed _creator, 
+        address indexed _tokenAdress, 
+        uint indexed _tokenId,
+        uint indexed _amountOfTokens, 
+        uint indexed _priceinUsd, 
+        uint32 indexed _deadline,
+        bool indexed _onSale
+    );
+    event cancellingOffer(
+        address indexed _creator,
+        uint indexed _offerId
+    );
+    event purchase(
+        address indexed _buyer,
+        uint indexed _offerId, 
+        string indexed _paymentMethod
+    );
+
     function initialize(address _recipient) public initializer {
         OwnableUpgradeable.__Ownable_init();
         ReentrancyGuardUpgradeable.__ReentrancyGuard_init();
@@ -64,12 +84,16 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         require(tokenContract.balanceOf(msg.sender, _tokenId) >= _amount, "Seller balance insufficient to place the offer");
         offerCount++;
         offers[offerCount] = Offer(msg.sender,_tokenAdress, _tokenId, _amount, _usdPrice * (10**8),uint32(block.timestamp + _deadline), true);
+
+        emit placingOffer(msg.sender,_tokenAdress, _tokenId, _amount, _usdPrice,uint32(block.timestamp + _deadline), true);
     }
 
     function cancellOffer(uint _id) public {
         require(_id <= offerCount, "Offer id does not exist");
         require(offers[_id].owner == msg.sender, "You are not the creator of this offer");
         offers[_id].onSale = false;
+
+        emit cancellingOffer(msg.sender, _id);
     }
 
     function buyWithEther(uint _id) external payable nonReentrant{
@@ -95,6 +119,8 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         if(msg.value > price){
             payable(msg.sender).call{value: msg.value - price}("");
         }
+
+        emit purchase(msg.sender, _id, "ETH");
         
     }
 
@@ -118,6 +144,8 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         daiToken.transferFrom(msg.sender, offerInfo.owner, price - (price * fee / 100));
         offerInfo.onSale = false;
         daiToken.transferFrom(msg.sender, recipient, price * fee / 100);
+
+        emit purchase(msg.sender, _id, "DAI");
     }
     
     function buyWithLink(uint _id) external payable nonReentrant{
@@ -140,6 +168,8 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         linkToken.transferFrom(msg.sender, offerInfo.owner, price - (price * fee / 100));
         offerInfo.onSale = false;
         linkToken.transferFrom(msg.sender, recipient, price * fee / 100);
+
+        emit purchase(msg.sender, _id, "LINK");
     }
 
 
