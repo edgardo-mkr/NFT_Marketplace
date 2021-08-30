@@ -9,8 +9,15 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-
+/// @title Marketplace fo ERC-1155 tokens
+/// @author Edgardo González
+/// @notice This contract allows user to place or cancell their offers and buy other people ERC-1155 tokens 
+/// @dev the seller or buyer(if buying with Dai or Link tokens) MUST first approve the contract to spend their token 
 contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable{
+    /**  
+        @dev the recipient is the receiver address of the fees charge on each sale
+        @dev the struct variable is used to help storage all the pertinent details of the offer
+    */
     address public recipient;
     uint public fee;
     struct Offer {
@@ -23,12 +30,18 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         bool onSale;
     }
 
+    /**   
+        @dev offers keeps track of all the offers made or cancelled
+        @dev offerCount is used to create unique id's for each sale
+    */
     mapping(uint => Offer) public offers;
     uint public offerCount;
 
+    /// @dev interfaces declarations for the dai and link contract to check approvals and transfers
     IERC20Upgradeable daiToken;
     IERC20Upgradeable linkToken;
 
+    /// @dev interfaces declarations for the chainlink aggregators to query off-chain pricefeeds
     AggregatorV3Interface internal ethPriceFeed;
     AggregatorV3Interface internal daiPriceFeed;
     AggregatorV3Interface internal linkPriceFeed;
@@ -53,6 +66,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         string indexed _paymentMethod
     );
 
+    /// @dev not forgetting to initialize the "Intialize" functions on all the parent contracts to be upgradable complaint 
     function initialize(address _recipient) public initializer {
         OwnableUpgradeable.__Ownable_init();
         ReentrancyGuardUpgradeable.__ReentrancyGuard_init();
@@ -68,6 +82,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
 
     }
 
+
     function updateFee(uint _newFee) public onlyOwner{
         fee = _newFee;
     }
@@ -76,6 +91,14 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         recipient = _newRecipient;
     }
 
+    /// @notice uploads an offer to the contract
+    /// @param _tokenAdress is the address of the ERC-1155 contract of which the tokens come from
+    /// @param _tokenId is the respective ID of the token  
+    /// @param _amount is the number of tokens desired to sell 
+    /// @param _usdPrice is the price in Usd for the whole amount of tokens
+    /// @param _deadline is the time limit that this offer will be active, expressed in seconds
+    /// @dev seller MUST first approve the contract to spend their token
+    /// @dev _usdPrice is multiply by 10^8 because the return value of the chainlink has 8 decimals places  
     function placeOffer(address _tokenAdress, uint _tokenId, uint _amount, uint _usdPrice, uint32 _deadline) public payable{
         IERC1155 tokenContract = IERC1155(_tokenAdress);
         require(tokenContract.isApprovedForAll(msg.sender, address(this)), "Approval is required to spend the tokens to be offered");
@@ -86,6 +109,8 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         emit placingOffer(msg.sender,_tokenAdress, _tokenId, _amount, _usdPrice, _deadline, true);
     }
 
+    /// @param _id is the offer ID
+    /// @dev you must be the creator of the offer to cancell it 
     function cancellOffer(uint _id) public {
         require(_id <= offerCount, "Offer id does not exist");
         require(offers[_id].owner == msg.sender, "You are not the creator of this offer");
@@ -94,6 +119,10 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         emit cancellingOffer(msg.sender, _id);
     }
 
+    /// @notice purchase an offer tokens with ETH as payment method
+    /// @param _id is the offer ID 
+    /// @dev if buyer sends more ether than the neccesary for the sale, they are return to the buyer
+    /// @dev chainlik oracle is used for the price calculation 
     function buyWithEther(uint _id) external payable nonReentrant{
         require(_id <= offerCount, "Offer id does not exist");
 
@@ -126,6 +155,9 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         
     }
 
+    /// @notice purchase an offer tokens with DAI as payment method
+    /// @param _id is the offer ID
+    /// @dev the buyer MUST approve the contract to spend their token for the right amount for the sale (using chainlink oracle)
     function buyWithDai(uint _id) external payable nonReentrant{
         require(_id <= offerCount, "Offer id does not exist");
 
@@ -151,6 +183,9 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         emit purchase(msg.sender, _id, "DAI");
     }
     
+    /// @notice purchase an offer tokens with LINK as payment method
+    /// @param _id is the offer ID
+    /// @dev the buyer MUST approve the contract to spend their token for the right amount for the sale (using chainlink oracle)
     function buyWithLink(uint _id) external payable nonReentrant{
         require(_id <= offerCount, "Offer id does not exist");
 
@@ -176,17 +211,22 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         emit purchase(msg.sender, _id, "LINK");
     }
 
-
+    /// @notice get ether price in Usd
+    /// @return price in Usd as an int with 8 decimals 
     function getEthPrice() public view returns (int) {
         (,int price,,,) = ethPriceFeed.latestRoundData();
         return price;
     }
 
+    /// @notice get dai price in Usd
+    /// @return price in Usd as an int with 8 decimals 
     function getDaiPrice() public view returns (int) {
         (,int price,,,) = daiPriceFeed.latestRoundData();
         return price;
     }
 
+    /// @notice get link price in Usd
+    /// @return price in Usd as an int with 8 decimals 
     function getLinkPrice() public view returns (int) {
         (,int price,,,) = linkPriceFeed.latestRoundData();
         return price;
