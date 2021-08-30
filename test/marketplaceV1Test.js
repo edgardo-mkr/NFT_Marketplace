@@ -159,9 +159,23 @@ describe("MarketplaceV1 contract", function (){
         })
     })
 
-    describe("Only owner", function() {
-        it("Should revert if update fee is called from account different than owner", async function() {
-            await expect(hardhatMarket.connect(addr1).updateFee(2)).to.be.revertedWith("Ownable: caller is not the owner");
+    describe("Updating fees", function() {
+        it("Should update fee", async function() {
+            await hardhatMarket.updateFee(2);
+            expect(await hardhatMarket.fee()).to.equal(2)
+        })
+        it("Should not allowed the update if msg.sender is not owner", async function() {
+            await expect(hardhatMarket.connect(addr1).updateFee(50)).to.be.revertedWith("Ownable: caller is not the owner");
+        })
+    })
+
+    describe("Changing the recipient account", function() {
+        it("Should change the recipient to the ew account", async function() {
+            await hardhatMarket.updateRecipient(addr1.address);
+            expect(await hardhatMarket.recipient()).to.equal(addr1.address)
+        })
+        it("Should not allowed the change if msg.sender is not owner", async function() {
+            await expect(hardhatMarket.connect(addr1).updateRecipient(addr1.address)).to.be.revertedWith("Ownable: caller is not the owner")
         })
     })
     
@@ -234,6 +248,29 @@ describe("MarketplaceV1 contract", function (){
         })
     })
 
+    describe("Cancell an offer", function() {
+        it("Should cancell an offer", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await hardhatMarket.connect(seller).cancellOffer(1);
+            let firstOffer = await hardhatMarket.offers(1)
+            expect(firstOffer.onSale).to.equal(false)
+        })
+
+        it("Should not allowed an user to cancell other users offers", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 120);
+
+            await expect(hardhatMarket.cancellOffer(1)).to.be.revertedWith("You are not the creator of this offer");
+
+        })
+
+        it("Should not allowed to cancel an invalid ID offer", async function() {
+            await expect(hardhatMarket.cancellOffer(1)).to.be.revertedWith("Offer id does not exist")
+        })
+    })
+
     describe("Attempting to buy without sending or aproving enough tokens", function() {
         it("Not sending enough ETH", async function() {
             await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
@@ -279,6 +316,8 @@ describe("MarketplaceV1 contract", function (){
             await expect(hardhatMarket.connect(buyerWithToken).buyWithLink(2)).to.be.revertedWith('Offer id does not exist')
         })
     })
+
+    
     
 
 })
