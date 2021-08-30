@@ -424,6 +424,50 @@ describe("MarketplaceV1 contract", function (){
             await expect(hardhatMarket.connect(buyerWithToken).buyWithLink(1)).to.be.revertedWith("The deadline has been reached");
         })
     })
+
+    describe("Events", function() {
+        it("Should emit placingOffer event", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+
+            await expect(hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 5))
+            .to.emit(hardhatMarket, "placingOffer")
+            .withArgs(seller.address, raribleAddress, 96436, 10, 20000, 5, true)
+        })
+        it("Should emit cancellingOffer event", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 5);
+
+            await expect(hardhatMarket.connect(seller).cancellOffer(1))
+            .to.emit(hardhatMarket, "cancellingOffer")
+            .withArgs(seller.address, 1)
+        })
+        it("Should emit purchase event while buying with ETH", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 5);
+
+            await expect(hardhatMarket.buyWithEther(1, {value: ethers.utils.parseEther("7.0")}))
+            .to.emit(hardhatMarket, "purchase")
+            .withArgs(owner.address, 1, "ETH")
+        })
+        it("Should emit purchase event while buying with DAI", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 5);
+
+            await daiContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('21000.0', 18));
+            await expect(hardhatMarket.connect(buyerWithToken).buyWithDai(1))
+            .to.emit(hardhatMarket, "purchase")
+            .withArgs(buyerWithToken.address, 1, "DAI")
+        })
+        it("Should emit purchase event while buying with LINK", async function() {
+            await raribleContract.connect(seller).setApprovalForAll(hardhatMarket.address,true);
+            await hardhatMarket.connect(seller).placeOffer(raribleAddress, 96436, 10, 20000, 5);
+
+            await linkContract.connect(buyerWithToken).approve(hardhatMarket.address, ethers.utils.parseUnits('1000.0', 18))
+            await expect(hardhatMarket.connect(buyerWithToken).buyWithLink(1))
+            .to.emit(hardhatMarket, "purchase")
+            .withArgs(buyerWithToken.address, 1, "LINK")
+        })
+    })
     
 
 })

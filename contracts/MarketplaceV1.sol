@@ -85,7 +85,7 @@ contract MarketplaceV1 is Initializable, OwnableUpgradeable, ReentrancyGuardUpgr
         offerCount++;
         offers[offerCount] = Offer(msg.sender,_tokenAdress, _tokenId, _amount, _usdPrice * (10**8),uint32(block.timestamp + _deadline), true);
 
-        emit placingOffer(msg.sender,_tokenAdress, _tokenId, _amount, _usdPrice,uint32(block.timestamp + _deadline), true);
+        emit placingOffer(msg.sender,_tokenAdress, _tokenId, _amount, _usdPrice, _deadline, true);
     }
 
     function cancellOffer(uint _id) public {
